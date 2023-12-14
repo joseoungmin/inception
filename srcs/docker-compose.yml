@@ -1,0 +1,67 @@
+version: "3.8"
+
+networks:
+  farmer:
+    name: farmer
+    driver: bridge
+
+volumes:
+  mariadb:
+    name: mariadb
+    driver: local
+    driver_opts:
+      o: "bind"
+      type: "none"
+      device: /home/seojo/data/mariadb
+  wordpress:
+    name: wordpress
+    driver: local
+    driver_opts:
+      o: "bind"
+      type: "none"
+      device: /home/seojo/data/wordpress
+
+services:
+  mariadb:
+    pull_policy: never
+    networks:
+      - farmer
+    volumes:
+      - mariadb:/var/lib/mysql
+    env_file:
+      - .env
+    restart: on-failure
+    container_name: mariadb
+    image: mariadb
+    build: ./requirements/mariadb
+  wordpress:
+      depends_on:
+        - mariadb
+      pull_policy: never
+      networks:
+        - farmer
+      volumes:
+        - wordpress:/var/www
+      env_file:
+        - .env
+      restart: on-failure
+      container_name: wordpress
+      image: wordpress
+      build: ./requirements/wordpress
+  nginx:
+      hostname: ${DOMAIN_NAME}
+      ports:
+        - "443:443"
+      depends_on:
+        - wordpress
+      pull_policy: never
+      networks:
+        - farmer
+      volumes:
+        - wordpress:/var/www
+      env_file:
+        - .env
+      restart: on-failure
+      container_name: nginx
+      image: nginx
+      build: ./requirements/nginx
